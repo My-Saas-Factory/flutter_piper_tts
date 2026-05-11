@@ -7,8 +7,6 @@ topics: [ tts, audio, dart ]
 environment:
   sdk: ^3.11.5
 
-resolution: workspace
-
 dependencies:
   code_assets: ^1.0.0
   ffi: ^2.2.0
