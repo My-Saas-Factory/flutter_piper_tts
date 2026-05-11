@@ -42,6 +42,14 @@ typedef struct FFIDisposeResponse {
   char *error_message;
 } FFIDisposeResponse;
 
+typedef struct FFISetSpeechRateResponse {
+  char *error_message;
+} FFISetSpeechRateResponse;
+
+typedef struct FFISetVolumeResponse {
+  char *error_message;
+} FFISetVolumeResponse;
+
 struct FFIInitResponse init(const char *data_dir, CompletionCallback completion_cb);
 
 struct FFICreateInstanceResponse create_instance(const char *model_path, const char *config_path);
@@ -53,5 +61,9 @@ struct FFIPauseResponse pause(int32_t fd);
 struct FFIResumeResponse resume(int32_t fd);
 
 struct FFIStopResponse stop(int32_t fd);
+
+struct FFISetSpeechRateResponse set_speech_rate(int32_t fd, float rate);
+
+struct FFISetVolumeResponse set_volume(float volume);
 
 struct FFIDisposeResponse dispose(int32_t fd);

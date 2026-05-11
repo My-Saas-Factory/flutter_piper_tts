@@ -1,7 +1,11 @@
 use std::{
     fs::File,
     path::Path,
-    sync::mpsc::{self, Sender},
+    sync::{
+        Arc,
+        atomic::{AtomicU32, Ordering},
+        mpsc::{self, Sender},
+    },
 };
 
 use espeak_ng::Translator;
@@ -24,6 +28,7 @@ enum SpeechTask {
 
 pub(crate) struct Instance {
     speech_tasks: Sender<SpeechTask>,
+    rate_multiplier: Arc<AtomicU32>, // f32 bits, default 1.0
 }
 
 unsafe impl Send for Instance {}
@@ -59,6 +64,9 @@ impl Instance {
 
         let (tx, rx) = mpsc::channel::<SpeechTask>();
 
+        let rate_multiplier = Arc::new(AtomicU32::new(1.0_f32.to_bits()));
+        let rate_multiplier_worker = Arc::clone(&rate_multiplier);
+
         std::thread::spawn(move || {
             while let Ok(task) = rx.recv() {
                 match task {
@@ -86,13 +94,16 @@ impl Instance {
 
                             debug!("phonemes: {}", phonemes);
 
-                            let samples = match infer(&mut ort_session, &config, &phonemes) {
-                                Ok(s) => s,
-                                Err(e) => {
-                                    error!("inference failed: {}", e);
-                                    continue;
-                                }
-                            };
+                            let rate =
+                                f32::from_bits(rate_multiplier_worker.load(Ordering::Relaxed));
+                            let samples =
+                                match infer(&mut ort_session, &config, &phonemes, rate) {
+                                    Ok(s) => s,
+                                    Err(e) => {
+                                        error!("inference failed: {}", e);
+                                        continue;
+                                    }
+                                };
 
                             AUDIO_PLAYER
                                 .get()
@@ -133,7 +144,16 @@ impl Instance {
             debug!("speech task worker exiting");
         });
 
-        Ok(Instance { speech_tasks: tx })
+        Ok(Instance {
+            speech_tasks: tx,
+            rate_multiplier,
+        })
+    }
+
+    pub(crate) fn set_speech_rate(&self, rate: f32) {
+        let safe = rate.max(0.1);
+        self.rate_multiplier
+            .store(safe.to_bits(), Ordering::Relaxed);
     }
 
     pub(crate) fn speak(&mut self, text: &str, dart_port: i64) -> TTSResult<()> {

@@ -108,6 +108,35 @@ class PiperTTS {
     }
   }
 
+  /// Sets the speech rate for this instance.
+  ///
+  /// `rate` is a multiplier where `1.0` is the model's default speed.
+  /// Values greater than `1.0` speak faster; values below `1.0` speak slower.
+  /// Pitch is preserved (the model resynthesizes at the new rate).
+  /// Takes effect on the next clause sent to the synthesizer; audio already
+  /// queued in the playback buffer is unaffected.
+  /// `rate` is clamped to a minimum of `0.1`.
+  void setSpeechRate(double rate) {
+    final result = g.set_speech_rate(_fd, rate);
+    final g.FFISetSpeechRateResponse(:error_message) = result;
+    if (error_message.isNotEmpty) {
+      throw Exception(error_message.toDartString());
+    }
+  }
+
+  /// Sets the global output volume.
+  ///
+  /// `volume` is linear in the range `[0.0, 1.0]` and is clamped to that range.
+  /// This is a process-global setting because the audio player is shared
+  /// across all `PiperTTS` instances; calling it on one instance affects all.
+  static void setVolume(double volume) {
+    final result = g.set_volume(volume);
+    final g.FFISetVolumeResponse(:error_message) = result;
+    if (error_message.isNotEmpty) {
+      throw Exception(error_message.toDartString());
+    }
+  }
+
   void dispose() {
     final result = g.dispose(_fd);
     final g.FFIDisposeResponse(:error_message) = result;

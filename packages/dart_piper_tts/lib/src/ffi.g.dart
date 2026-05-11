@@ -44,6 +44,12 @@ external FFIResumeResponse resume(int fd);
 @ffi.Native<FFIStopResponse Function(ffi.Int32)>()
 external FFIStopResponse stop(int fd);
 
+@ffi.Native<FFISetSpeechRateResponse Function(ffi.Int32, ffi.Float)>()
+external FFISetSpeechRateResponse set_speech_rate(int fd, double rate);
+
+@ffi.Native<FFISetVolumeResponse Function(ffi.Float)>()
+external FFISetVolumeResponse set_volume(double volume);
+
 @ffi.Native<FFIDisposeResponse Function(ffi.Int32)>()
 external FFIDisposeResponse dispose(int fd);
 
@@ -75,5 +81,13 @@ final class FFIStopResponse extends ffi.Struct {
 }
 
 final class FFIDisposeResponse extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> error_message;
+}
+
+final class FFISetSpeechRateResponse extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> error_message;
+}
+
+final class FFISetVolumeResponse extends ffi.Struct {
   external ffi.Pointer<ffi.Char> error_message;
 }

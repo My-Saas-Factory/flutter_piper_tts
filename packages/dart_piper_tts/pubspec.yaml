@@ -38,6 +38,8 @@ ffigen:
       - pause
       - resume
       - stop
+      - set_speech_rate
+      - set_volume
       - dispose
   unnamed-enums:
     exclude:

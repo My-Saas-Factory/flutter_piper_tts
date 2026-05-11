@@ -33,14 +33,19 @@ pub(crate) fn infer(
     session: &mut Session,
     config: &ModelConfig,
     phonemes: &str,
+    rate_multiplier: f32,
 ) -> TTSResult<Vec<f32>> {
     let ids = phonemes_to_ids(config, phonemes);
     let input_len = ids.len();
     let input = Array2::<i64>::from_shape_vec((1, input_len), ids).unwrap();
     let input_lengths = Array1::<i64>::from_iter([input_len as i64]);
+    // length_scale convention: smaller = faster. Expose `rate_multiplier`
+    // where 1.0 = model default and >1.0 = faster, matching flutter_tts.
+    let safe_rate = rate_multiplier.max(0.1);
+    let effective_length_scale = config.inference.length_scale / safe_rate;
     let scales = Array1::<f32>::from_iter([
         config.inference.noise_scale,
-        config.inference.length_scale,
+        effective_length_scale,
         config.inference.noise_w,
     ]);
 

@@ -169,6 +169,37 @@ pub extern "C" fn stop(fd: i32) -> FFIStopResponse {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn set_speech_rate(fd: i32, rate: f32) -> FFISetSpeechRateResponse {
+    with_instance_mut(
+        fd,
+        FFISetSpeechRateResponse {
+            error_message: convert_string_to_cstring("instance not initialized"),
+        },
+        |instance| {
+            instance.set_speech_rate(rate);
+            FFISetSpeechRateResponse {
+                error_message: convert_string_to_cstring(""),
+            }
+        },
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn set_volume(volume: f32) -> FFISetVolumeResponse {
+    match AUDIO_PLAYER.get() {
+        Some(player) => {
+            player.lock().unwrap().set_volume(volume);
+            FFISetVolumeResponse {
+                error_message: convert_string_to_cstring(""),
+            }
+        }
+        None => FFISetVolumeResponse {
+            error_message: convert_string_to_cstring("audio player not initialized"),
+        },
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn dispose(fd: i32) -> FFIDisposeResponse {
     match INSTANCES.write().unwrap().remove(&fd) {
         Some(_) => FFIDisposeResponse {
@@ -228,5 +259,15 @@ pub struct FFIStopResponse {
 
 #[repr(C)]
 pub struct FFIDisposeResponse {
+    pub error_message: *mut c_char,
+}
+
+#[repr(C)]
+pub struct FFISetSpeechRateResponse {
+    pub error_message: *mut c_char,
+}
+
+#[repr(C)]
+pub struct FFISetVolumeResponse {
     pub error_message: *mut c_char,
 }

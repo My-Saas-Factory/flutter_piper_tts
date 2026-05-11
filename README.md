@@ -49,6 +49,17 @@ TTS in Dart (or Flutter) using Piper TTS models + audio player in one package.
   await tts.speak("Bye", waitForCompletion: false)
   tts.stop();
 ```
+- Adjust speech rate and volume
+```dart
+  // Per-instance speech rate: 1.0 = model default, >1.0 faster, <1.0 slower.
+  // Pitch is preserved (the model resynthesizes at the new rate).
+  // Takes effect on the next clause; queued audio is unaffected.
+  tts.setSpeechRate(1.25);
+
+  // Global linear volume in [0.0, 1.0]. The audio player is process-global,
+  // so this affects all PiperTTS instances.
+  PiperTTS.setVolume(0.8);
+```
 
 ## Supported platforms
 - Android
@@ -59,4 +70,3 @@ TTS in Dart (or Flutter) using Piper TTS models + audio player in one package.
 ## TODO
 - Revisit phonemization
 - Allow custom phoneme mapping
-- Adjust speed (with change in pitch/not)

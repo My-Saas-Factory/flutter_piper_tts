@@ -1,6 +1,6 @@
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicBool, AtomicU8, Ordering},
+    atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering},
     mpsc,
 };
 
@@ -51,6 +51,7 @@ pub(crate) struct AudioPlayer {
     ring_buffer: HeapProd<AudioSlot>,
     command: Arc<AtomicU8>,
     drain: Arc<AtomicBool>,
+    volume: Arc<AtomicU32>, // f32 bits, 0.0..=1.0
 }
 
 impl Default for AudioPlayer {
@@ -66,9 +67,11 @@ impl AudioPlayer {
 
         let command = Arc::new(AtomicU8::new(AudioPlayerCommand::Play as u8));
         let drain = Arc::new(AtomicBool::new(false));
+        let volume = Arc::new(AtomicU32::new(1.0_f32.to_bits()));
 
         let command_cb = Arc::clone(&command);
         let drain_cb = Arc::clone(&drain);
+        let volume_cb = Arc::clone(&volume);
 
         let (completion_tx, completion_rx) = mpsc::channel::<i64>();
 
@@ -85,13 +88,14 @@ impl AudioPlayer {
             },
             move |data| {
                 let cmd = command_cb.load(Ordering::Relaxed);
+                let vol = f32::from_bits(volume_cb.load(Ordering::Relaxed));
 
                 for out in data.iter_mut() {
                     if cmd != AudioPlayerCommand::Play as u8 {
                         if drain_cb.load(Ordering::Relaxed) {
                             while let Some(s) = consumer.try_pop() {
                                 match s {
-                                    AudioSlot::Sample(s) => *out = s,
+                                    AudioSlot::Sample(s) => *out = s * vol,
                                     AudioSlot::Complete(port) => {
                                         let _ = completion_tx.send(port);
                                     }
@@ -120,7 +124,7 @@ impl AudioPlayer {
                         frac -= 1.0;
                     }
 
-                    *out = held_sample;
+                    *out = held_sample * vol;
                 }
             },
         )
@@ -147,7 +151,13 @@ impl AudioPlayer {
             ring_buffer: producer,
             command,
             drain,
+            volume,
         }
+    }
+
+    pub fn set_volume(&self, volume: f32) {
+        let clamped = volume.clamp(0.0, 1.0);
+        self.volume.store(clamped.to_bits(), Ordering::Relaxed);
     }
 
     pub fn play(&mut self, samples: &[f32]) {
